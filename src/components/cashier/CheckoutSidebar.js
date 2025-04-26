@@ -11,6 +11,9 @@ import {
   FormControlLabel,
   Checkbox,
 } from "@mui/material";
+
+import { postCheckout } from '@/services/pos';
+
 import { FaAngleRight } from "react-icons/fa6";
 import { FaRegCreditCard } from "react-icons/fa6";
 import { BsCash } from "react-icons/bs";
@@ -73,18 +76,78 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
     }));
   };
 
-  const handleCheckout = () => {
-    console.log("Checkout payload:", payloadOrder);
-    setOpenSuccessModal(true);
-
-    setTimeout(() => {
+  const handleHitApi = async () => {
+    try {
+      const profile = await getUserProfile();
+      console.log("Profile:", profile);
+  
+      // setelah sukses ambil data, baru pindah halaman
       route.push("/status");
-
+  
+      // kalau mau set Navbar atau apapun
       setNavbar("status");
       clearCart();
       clearPayloadOrder();
-    }, 2200);
+    } catch (error) {
+      console.error("Failed to fetch profile:", error);
+    }
   };
+  
+
+  const handleCheckout = async () => {
+    try {
+      console.log("Checkout payload:", payloadOrder);
+  // HIT API terlebih dahulu
+      const now = new Date();
+      const isoString = now.toISOString();
+      const payload = {
+        customer_name: `${payloadOrder.customer_name}`,
+        phone_number: `${payloadOrder.phone_number}`,
+        date_in: isoString,
+        date_out: "2025-04-27T18:00:00Z",
+        delivery_method: "delivery",
+        delivery_fee: 0,
+        total_price: payloadOrder.total_amount,
+        status: "Pending",
+        created_by: "admin",
+        transaction_items: [
+          {
+            laundry_variant_id: 1,
+            quantity: 2.5,
+            price_per_unit: 25000,
+            subtotal: 62500,
+            estimated_finish_date: "2025-04-27T12:00:00Z",
+            status: "selesai"
+          },
+          {
+            laundry_variant_id: 2,
+            quantity: 1,
+            price_per_unit: 12500,
+            subtotal: 12500,
+            estimated_finish_date: "2025-04-27T18:00:00Z",
+            status: "selesai"
+          }
+        ]
+      };
+
+      const checkout = await postCheckout(payload);
+      console.log("Profile dari API:", checkout);
+  
+      // Setelah berhasil dapat response, lanjut checkout
+      setOpenSuccessModal(true);
+  
+      setTimeout(() => {
+        route.push("/status");
+        setNavbar("status");
+        clearCart();
+        clearPayloadOrder();
+      }, 2200);
+  
+    } catch (error) {
+      console.error("Gagal hit API:", error);
+    }
+  };
+  
 
   const handleSave = () => {
     // Save the current state without completing checkout

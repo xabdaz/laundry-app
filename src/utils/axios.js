@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const axiosInstance = axios.create({
-  baseURL: 'http://api.xabdaz.tech', // no trailing slash
+  baseURL: 'http://localhost:8080', // no trailing slash
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
