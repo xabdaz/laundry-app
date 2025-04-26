@@ -24,6 +24,8 @@ import { formatRupiah } from "@/utils/helper";
 import { useRouter } from "next/navigation";
 import SuccessPayment from "../modal/SuccessPayment";
 import { useGeneralContext } from "@/context/GeneralContext";
+import { getEtalase } from "@/services/pos";
+
 import CurrencyInput from "../CurrencyInput";
 
 export default function CheckoutSidebar({ nav_width, cart_width }) {
@@ -75,24 +77,6 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
       [field]: value,
     }));
   };
-
-  const handleHitApi = async () => {
-    try {
-      const profile = await getUserProfile();
-      console.log("Profile:", profile);
-  
-      // setelah sukses ambil data, baru pindah halaman
-      route.push("/status");
-  
-      // kalau mau set Navbar atau apapun
-      setNavbar("status");
-      clearCart();
-      clearPayloadOrder();
-    } catch (error) {
-      console.error("Failed to fetch profile:", error);
-    }
-  };
-  
 
   const handleCheckout = async () => {
     try {

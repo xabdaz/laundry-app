@@ -12,41 +12,38 @@ import {
   Paper,
   InputBase,
   IconButton,
+  Skeleton,
 } from "@mui/material";
 import { FiSearch } from "react-icons/fi";
 import { useCartContext } from "@/context/CartContext";
 import { formatRupiah } from "@/utils/helper";
-
-// Mock data for laundry services
-const laundryServices = [
-  {
-    id: 1,
-    name: "Cuci Setrika",
-    price: 10000,
-    image: "laundry.jpg",
-    category: "satuan-jas",
-  },
-  {
-    id: 2,
-    name: "Cuci Kering",
-    price: 8000,
-    image: "laundry.jpg",
-    category: "satuan-jas",
-  },
-];
+import { getEtalase } from "@/services/pos";
 
 export default function MainContent({ nav_width, cart_width }) {
   const [value, setValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [fetchData, setFetchData] = useState([]);
   const { addItem } = useCartContext();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
+    getFetchEtalase();
   }, []);
+
+  const getFetchEtalase = async () => {
+    try {
+      setLoading(true);
+      const response = await getEtalase();
+      const data = response.data || [];
+      setFetchData(data);
+      setLoading(false);
+      return response;
+    } catch (error) {
+      console.error("Failed to fetch etalase:", error);
+      setLoading(false);
+      return null;
+    }
+  };
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -56,27 +53,25 @@ export default function MainContent({ nav_width, cart_width }) {
     setSearchQuery(event.target.value.toLowerCase());
   };
 
-  const filteredServices = laundryServices.filter((service) => {
-    const matchesSearch = service.name.toLowerCase().includes(searchQuery);
-    let matchesTab = true;
-    switch (value) {
-      case 1:
-        matchesTab = service.category === "satuan-jas";
-        break;
-      case 2:
-        matchesTab = service.category === "satuan-pakaian";
-        break;
-      case 3:
-        matchesTab = service.category === "per-kg";
-        break;
-      case 4:
-        matchesTab = service.category === "per-kk";
-        break;
-      default:
-        matchesTab = true;
-    }
-    return matchesSearch && matchesTab;
+  const filteredServices = fetchData.filter((service) => {
+    const matchesSearch = service.name?.toLowerCase().includes(searchQuery);
+    if (value === 0) return matchesSearch; // Semua
+    const selectedCategory = fetchData[value - 1]?.name;
+    return matchesSearch && service.name === selectedCategory;
   });
+
+  const ShimmerTabs = () => (
+    <Tabs value={value} onChange={handleChange} sx={{ mb: 2 }}>
+      {[...Array(4)].map((_, index) => (
+        <Tab
+          key={index}
+          label={<Skeleton width={100} height={30} />}
+          disabled
+          sx={{ textTransform: "capitalize", fontSize: "16px" }}
+        />
+      ))}
+    </Tabs>
+  );
 
   const ShimmerCard = () => (
     <Card sx={{ cursor: "pointer", height: 250, backgroundColor: "#eee" }}>
@@ -139,12 +134,21 @@ export default function MainContent({ nav_width, cart_width }) {
           />
         </Paper>
 
-        <Tabs value={value} onChange={handleChange} sx={{ mb: 2 }}>
-          <Tab label="Semua" value={0} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
-          <Tab label="Satuan Jas" value={1} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
-          <Tab label="Satuan Pakaian" value={2} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
-          <Tab label="Per Kg" value={3} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
-        </Tabs>
+        {loading ? (
+          <ShimmerTabs />
+        ) : (
+          <Tabs value={value} onChange={handleChange} sx={{ mb: 2 }}>
+            <Tab label="Semua" value={0} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
+            {fetchData.map((item, index) => (
+              <Tab
+                key={item.id}
+                label={item.name}
+                value={index + 1}
+                sx={{ textTransform: "capitalize", fontSize: "16px" }}
+              />
+            ))}
+          </Tabs>
+        )}
       </Box>
 
       <Box
@@ -182,7 +186,7 @@ export default function MainContent({ nav_width, cart_width }) {
                 <Card sx={{ cursor: "pointer" }}>
                   <CardContent sx={{ textAlign: "center" }}>
                     <img
-                      src={service.image}
+                      src={"laundry.jpg"} // default gambar
                       alt={service.name}
                       style={{
                         width: 150,
@@ -193,7 +197,8 @@ export default function MainContent({ nav_width, cart_width }) {
                       }}
                     />
                     <Typography fontWeight="bold" fontSize={16} mt={2}>
-                      {formatRupiah(service.price)}
+                      {/* Karena tidak ada price di data, contoh isi dummy */}
+                      {formatRupiah(10000)}
                     </Typography>
                     <Typography variant="h6" fontSize={16} fontWeight={500}>
                       {service.name}

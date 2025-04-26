@@ -9,3 +9,8 @@ export const postCheckout = async (checkoutPayload) => {
   const response = await axios.post('/checkout', checkoutPayload);
   return response.data;
 }
+
+export const getEtalase = async () => {
+  const response = await axios.get('/etalase')
+  return response.data
+}
