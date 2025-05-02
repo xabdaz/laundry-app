@@ -2,6 +2,7 @@
 
 import { CartProvider } from "@/context/CartContext";
 import { GeneralProvider } from "@/context/GeneralContext";
+import { PhoneProvider } from "@/context/PhoneContext";
 
 import { Box } from "@mui/material";
 
@@ -13,9 +14,14 @@ export function Providers({ children }) {
         overflow: "hidden",
         position: "relative",
         bgcolor: "#FAFAFA",
-      }}>
+      }}
+    >
       <GeneralProvider>
-        <CartProvider>{children}</CartProvider>
+        <PhoneProvider>
+          <CartProvider>
+            {children}
+          </CartProvider>
+        </PhoneProvider>
       </GeneralProvider>
     </Box>
   );

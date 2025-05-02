@@ -48,6 +48,7 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
         name: item.name,
         price: item.price,
         quantity: item.qty,
+        price_delivery_perKg: item.price_delivery_perKg
       })),
       total_amount: calculateTotal(),
       payment_method: paymentMethod,
@@ -68,7 +69,7 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
   }, [cart, paymentMethod, selectedCard, cardInfo]);
 
   const calculateTotal = () => {
-    return cart.reduce((total, item) => total + item.price * item.qty, 0);
+    return cart.reduce((total, item) => total + (item.price + item.price_delivery_perKg) * item.qty, 0);
   };
 
   const handleCardInfoChange = (field, value) => {
@@ -94,28 +95,39 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
         total_price: payloadOrder.total_amount,
         status: "Pending",
         created_by: "admin",
-        transaction_items: [
-          {
-            laundry_variant_id: 1,
-            quantity: 2.5,
-            price_per_unit: 25000,
-            subtotal: 62500,
-            estimated_finish_date: "2025-04-27T12:00:00Z",
-            status: "selesai"
-          },
-          {
-            laundry_variant_id: 2,
-            quantity: 1,
-            price_per_unit: 12500,
-            subtotal: 12500,
-            estimated_finish_date: "2025-04-27T18:00:00Z",
-            status: "selesai"
-          }
-        ]
+        transaction_items: payloadOrder.items.map((item) => ({
+          laundry_variant_id: item.id,
+          price_per_unit: item.price,
+          estimated_finish_date: "2025-04-27T12:00:00Z",
+          quantity: item.quantity,
+          price_delivery_perkg: item.price_delivery_perKg,
+          status: "belum_diproses",
+          subtotal: ((item.quantity) * (item.price+item.price_delivery_perKg))
+        }))
+        // [
+        //   {
+        //     laundry_variant_id: 1,
+        //     quantity: 2.5,
+        //     price_per_unit: 25000,
+        //     subtotal: 62500,
+        //     estimated_finish_date: "2025-04-27T12:00:00Z",
+        //     status: "selesai"
+        //   },
+        //   {
+        //     laundry_variant_id: 2,
+        //     quantity: 1,
+        //     price_per_unit: 12500,
+        //     subtotal: 12500,
+        //     estimated_finish_date: "2025-04-27T18:00:00Z",
+        //     status: "selesai"
+        //   }
+        // ]
       };
 
       const checkout = await postCheckout(payload);
       console.log("Profile dari API:", checkout);
+
+      console.log("Request dari API:", payload);
   
       // Setelah berhasil dapat response, lanjut checkout
       setOpenSuccessModal(true);
