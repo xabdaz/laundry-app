@@ -10,6 +10,7 @@ import { GrTransaction } from "react-icons/gr";
 import { PiCashRegisterDuotone } from "react-icons/pi";
 import { useRouter, usePathname } from "next/navigation";
 
+
 function SidebarButton({ icon: Icon, label }) {
   const { navbar, setNavbar } = useGeneral();
   const route = useRouter();
@@ -64,7 +65,13 @@ function SidebarButton({ icon: Icon, label }) {
   );
 }
 
+
 export default function NavigationSidebar({ width }) {
+  const pathname = usePathname();
+  // Hide sidebar on /print/struk
+  if (pathname === "/print/struk") {
+    return null;
+  }
   return (
     <Box
       sx={{

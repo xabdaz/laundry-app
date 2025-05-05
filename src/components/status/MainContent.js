@@ -1,123 +1,190 @@
+// MainContent.jsx
 "use client";
 
-import React, { useState } from "react";
-import { Box, Tab, Tabs, Typography, Chip, Paper } from "@mui/material";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Box,
+  Tab,
+  Tabs,
+  Typography,
+  Chip,
+  Paper,
+  Skeleton,
+  CircularProgress,
+} from "@mui/material";
 import { formatRupiah } from "@/utils/helper";
+import { useTransaction } from "@/context/useEtalase";
+import { getTransactionDetail, getListTransaction } from "@/services/pos";
 
-const orders = [
-  { id: 240, items: 1, time: "17:00", total: 34298, status: "Finished" },
-  { id: 241, items: 6, time: "17:03", total: 47829, status: "Pending" },
-  { id: 242, items: 4, time: "17:06", total: 113203, status: "Pending" },
-  { id: 243, items: 5, time: "17:09", total: 113391, status: "Pending" },
-  { id: 244, items: 6, time: "17:12", total: 82044, status: "Finished" },
-  { id: 245, items: 1, time: "17:15", total: 44774, status: "Finished" },
-  { id: 246, items: 5, time: "17:18", total: 53791, status: "Finished" },
-  { id: 247, items: 4, time: "17:21", total: 70857, status: "Pending" },
-  { id: 248, items: 6, time: "17:24", total: 66062, status: "Pending" },
-  { id: 249, items: 4, time: "17:27", total: 71613, status: "Finished" },
-  { id: 250, items: 6, time: "17:30", total: 87824, status: "Pending" },
-  { id: 251, items: 5, time: "17:33", total: 93444, status: "Finished" },
-  { id: 252, items: 1, time: "17:36", total: 72782, status: "Pending" },
-  { id: 253, items: 6, time: "17:39", total: 32710, status: "Finished" },
-  { id: 254, items: 3, time: "17:42", total: 75245, status: "Pending" },
-  { id: 255, items: 5, time: "17:45", total: 104195, status: "Pending" },
-  { id: 256, items: 3, time: "17:48", total: 99789, status: "Finished" },
-  { id: 257, items: 2, time: "17:51", total: 79985, status: "Pending" },
-  { id: 258, items: 4, time: "17:54", total: 71261, status: "Finished" },
-  { id: 259, items: 4, time: "17:57", total: 111771, status: "Pending" },
-  { id: 260, items: 4, time: "18:00", total: 32894, status: "Finished" },
-  { id: 261, items: 4, time: "18:03", total: 39126, status: "Pending" },
-  { id: 262, items: 4, time: "18:06", total: 68180, status: "Pending" },
-  { id: 263, items: 5, time: "18:09", total: 61117, status: "Pending" },
-  { id: 264, items: 5, time: "18:12", total: 91184, status: "Finished" },
-  { id: 265, items: 6, time: "18:15", total: 63690, status: "Pending" },
-  { id: 266, items: 3, time: "18:18", total: 55727, status: "Finished" },
-  { id: 267, items: 3, time: "18:21", total: 106309, status: "Pending" },
-  { id: 268, items: 4, time: "18:24", total: 108984, status: "Pending" },
-  { id: 269, items: 1, time: "18:27", total: 50655, status: "Finished" },
-  { id: 270, items: 2, time: "18:30", total: 115273, status: "Pending" },
-  { id: 271, items: 6, time: "18:33", total: 96541, status: "Finished" },
-  { id: 272, items: 3, time: "18:36", total: 98337, status: "Finished" },
-  { id: 273, items: 4, time: "18:39", total: 112157, status: "Pending" },
-  { id: 274, items: 2, time: "18:42", total: 78032, status: "Pending" },
-  { id: 275, items: 5, time: "18:45", total: 71064, status: "Pending" },
-  { id: 276, items: 4, time: "18:48", total: 115001, status: "Pending" },
-  { id: 277, items: 4, time: "18:51", total: 66683, status: "Pending" },
-  { id: 278, items: 6, time: "18:54", total: 91118, status: "Finished" },
-  { id: 279, items: 2, time: "18:57", total: 114312, status: "Finished" },
-  { id: 280, items: 3, time: "19:00", total: 49138, status: "Finished" },
-  { id: 281, items: 4, time: "19:03", total: 111260, status: "Finished" },
-  { id: 282, items: 2, time: "19:06", total: 73488, status: "Pending" },
-  { id: 283, items: 5, time: "19:09", total: 59811, status: "Finished" },
-  { id: 284, items: 2, time: "19:12", total: 103280, status: "Finished" },
-  { id: 285, items: 2, time: "19:15", total: 38933, status: "Finished" },
-  { id: 286, items: 2, time: "19:18", total: 64906, status: "Finished" },
-  { id: 287, items: 4, time: "19:21", total: 38363, status: "Pending" },
-  { id: 288, items: 6, time: "19:24", total: 68989, status: "Pending" },
-  { id: 289, items: 3, time: "19:27", total: 97887, status: "Pending" },
-];
-
-export default function MainContent({ nav_width, cart_width }) {
+export default function MainContent({ nav_width, cart_width, setShowCartSidebar, shouldRefresh, setShouldRefresh }) {
   const [value, setValue] = useState(0);
+  const [page, setPage] = useState(1);
+  const [allOrders, setAllOrders] = useState([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingDetailId, setLoadingDetailId] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const scrollContainerRef = useRef(null);
 
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
+  const { data, isLoading } = useTransaction(page);
+
+  const formatWIBTime = (isoString) => {
+    const date = new Date(isoString);
+    const optionsTime = {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Jakarta",
+    };
+    const optionsDate = {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Jakarta",
+    };
+    const timePart = date.toLocaleTimeString("id-ID", optionsTime);
+    const datePart = date.toLocaleDateString("id-ID", optionsDate);
+    return `${timePart} WIB, ${datePart}`;
   };
 
-  // Filter logic based on tab
+  const fetchFreshTransaction = async () => {
+    try {
+      setIsRefreshing(true);
+      const freshData = await getListTransaction({ page: 1 });
+      const mapped = (freshData?.data || []).map((tx) => ({
+        id: tx.id,
+        items: 1,
+        name: tx.customer_name,
+        phone_number: tx.phone_number,
+        time: formatWIBTime(tx.date_in),
+        total: tx.total_price,
+        isHasPaid: tx.isHasPayment,
+        status: tx.status === "pending" ? "Pending" : "Finished",
+      }));
+      setAllOrders(mapped);
+      setPage(1);
+      setHasMore(true);
+    } catch (err) {
+      console.error("Gagal pull to refresh:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!data) return;
+    const mapped = data.map((tx) => ({
+      id: tx.id,
+      items: 1,
+      name: tx.customer_name,
+      phone_number: tx.phone_number,
+      time: formatWIBTime(tx.date_in),
+      total: tx.total_price,
+      isHasPaid: tx.isHasPayment,
+      status: tx.status === "pending" ? "Pending" : "Finished",
+    }));
+
+    if (page === 1) {
+      setAllOrders(mapped);
+      setHasMore(true);
+    } else if (mapped.length > 0) {
+      setAllOrders((prev) => [...prev, ...mapped]);
+    } else {
+      setHasMore(false);
+    }
+  }, [data, page]);
+
+  useEffect(() => {
+    if (shouldRefresh) {
+      fetchFreshTransaction();
+      setShouldRefresh(false);
+    }
+  }, [shouldRefresh, setShouldRefresh]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const nearBottom =
+        window.innerHeight + window.scrollY >=
+        document.body.offsetHeight - 300;
+      if (nearBottom && hasMore && !isLoading) {
+        setPage((prev) => prev + 1);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [hasMore, isLoading]);
+
+  const handleSelectOrder = async (order) => {
+    try {
+      setLoadingDetailId(order.id);
+      const res = await getTransactionDetail(order.id);
+      if (res && res.data) {
+        setShowCartSidebar(res.data);
+      }
+    } catch (err) {
+      console.error("Gagal mengambil detail transaksi:", err);
+    } finally {
+      setLoadingDetailId(null);
+    }
+  };
+
   const filteredOrders =
     value === 0
-      ? orders
-      : orders.filter((order) =>
-          value === 1 ? order.status === "Pending" : order.status === "Finished"
+      ? allOrders
+      : allOrders.filter((order) =>
+          value === 1
+            ? order.status === "Pending"
+            : order.status === "Finished"
         );
 
   return (
-    <Box
-      sx={{
-        marginLeft: nav_width,
-        marginRight: cart_width,
-        overflow: "hidden",
+    <Box sx={{
+      marginLeft: nav_width,
+      marginRight: cart_width,
+      overflow: "hidden",
+      bgcolor: "#FAFAFA",
+      display: "flex",
+      flexDirection: "column",
+      height: "100vh",
+    }}>
+      <Box sx={{
+        position: "sticky",
+        top: 0,
         bgcolor: "#FAFAFA",
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
+        zIndex: 1,
+        p: 4,
+        pb: 0,
       }}>
-      {/* Sticky Header (Tabs) */}
-      <Box
-        sx={{
-          position: "sticky",
-          top: 0,
-          bgcolor: "#FAFAFA",
-          zIndex: 1,
-          p: 4,
-          pb: 0,
-        }}>
-        <Tabs value={value} onChange={handleChange} sx={{ mb: 2 }}>
-          <Tab
-            label="Semua"
-            value={0}
-            sx={{ textTransform: "capitalize", fontSize: "16px" }}
-          />
-          <Tab
-            label="Pending"
-            value={1}
-            sx={{ textTransform: "capitalize", fontSize: "16px" }}
-          />
-          <Tab
-            label="Selesai"
-            value={2}
-            sx={{ textTransform: "capitalize", fontSize: "16px" }}
-          />
+        <Tabs value={value} onChange={(e, v) => setValue(v)} sx={{ mb: 2 }}>
+          <Tab label="Semua" value={0} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
+          <Tab label="Pending" value={1} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
+          <Tab label="Selesai" value={2} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
         </Tabs>
       </Box>
 
-      {/* Orders Content */}
-      <Box sx={{ flex: 1, overflowY: "auto", p: 4, pt: 0, mt: 2.5 }}>
+      <Box
+        sx={{ flex: 1, overflowY: "auto", p: 4, pt: 0, mt: 1.5 }}
+        ref={scrollContainerRef}
+        onTouchStart={(e) => (scrollContainerRef.current._startY = e.touches[0].clientY)}
+        onTouchEnd={(e) => {
+          const endY = e.changedTouches[0].clientY;
+          const diffY = endY - scrollContainerRef.current._startY;
+          if (diffY > 50 && scrollContainerRef.current.scrollTop === 0) {
+            fetchFreshTransaction();
+          }
+        }}
+      >
+        {isRefreshing && (
+          <Typography textAlign="center" fontSize={14} color="gray" mb={2}>
+            Memuat ulang data...
+          </Typography>
+        )}
+
         {filteredOrders.map((order) => (
           <Paper
             key={order.id}
+            onClick={() => handleSelectOrder(order)}
             sx={{
+              cursor: "pointer",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -127,34 +194,73 @@ export default function MainContent({ nav_width, cart_width }) {
               bgcolor: "#fff",
               color: "#000",
               boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-            }}>
+              opacity: loadingDetailId === order.id ? 0.6 : 1,
+            }}
+          >
             <Box>
               <Typography fontWeight="bold">Order #{order.id}</Typography>
-              <Typography fontSize={14} pt={3}>
-                Total Item <b>{order.items}</b>
-              </Typography>
+              <Typography fontWeight="bold">Nama : {order.name} ({order.phone_number})</Typography>
+              <Typography fontSize={14} pt={3}>Total Item <b>{order.items}</b></Typography>
             </Box>
             <Box textAlign="right">
               <Typography variant="body2">{order.time}</Typography>
-              <Box display={"flex"} alignItems={"center"} gap={2} pt={3}>
-                <Typography fontWeight={"bold"}>
-                  {formatRupiah(order.total)}
-                </Typography>
-                <Chip
-                  label={order.status}
-                  sx={{
-                    fontSize: 12,
-                    bgcolor: order.status === "Pending" ? "#FFD700" : "#38d46e",
-                    color: "#fff",
-                    height: 24,
-                    borderRadius: "12px",
-                    fontWeight: 600,
-                  }}
-                />
+              <Chip
+                label={order.isHasPaid ? "Sudah Bayar" : "Belum Bayar"}
+                sx={{
+                  fontSize: 12,
+                  bgcolor: order.isHasPaid ? "#38d46e" : "#FF0000",
+                  color: "#fff",
+                  height: 24,
+                  borderRadius: "12px",
+                  fontWeight: 600,
+                }}
+              />
+              <Box display="flex" alignItems="center" gap={2} pt={3}>
+                <Typography fontWeight="bold">{formatRupiah(order.total)}</Typography>
+              </Box>
+              {loadingDetailId === order.id && (
+                <Box mt={1}>
+                  <CircularProgress size={16} thickness={4} />
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        ))}
+
+        {isLoading && [...Array(3)].map((_, index) => (
+          <Paper
+            key={`skeleton-${index}`}
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              px: 3,
+              mb: 2,
+              py: 2,
+              bgcolor: "#fff",
+              color: "#000",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+            }}
+          >
+            <Box>
+              <Skeleton variant="text" width={120} height={24} />
+              <Skeleton variant="text" width={100} height={20} sx={{ mt: 2 }} />
+            </Box>
+            <Box textAlign="right">
+              <Skeleton variant="text" width={60} height={18} />
+              <Box display="flex" justifyContent="flex-end" gap={1} pt={2}>
+                <Skeleton variant="text" width={80} height={22} />
+                <Skeleton variant="rounded" width={60} height={24} />
               </Box>
             </Box>
           </Paper>
         ))}
+
+        {!hasMore && !isLoading && allOrders.length > 0 && (
+          <Typography textAlign="center" py={2} color="gray">
+            Semua data sudah ditampilkan.
+          </Typography>
+        )}
       </Box>
     </Box>
   );

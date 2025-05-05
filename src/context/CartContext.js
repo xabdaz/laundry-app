@@ -68,6 +68,10 @@ function cartReducer(state, action) {
       };
     case "CLEAR_CART":
       return initialState;
+    case "ADD_ITEMS":
+      return {
+        items: state.items
+      };
     default:
       return state;
   }
@@ -96,6 +100,7 @@ export function CartProvider({ children }) {
   }, [state.items, isMounted]);
 
   const addItem = (item) => dispatch({ type: "ADD_ITEM", payload: item });
+  const addItems = (item) => dispatch({ type: "ADD_ITEMS", payload: item });
   const updateQty = (id, qty) =>
     dispatch({ type: "UPDATE_QTY", payload: { id, qty } });
   const removeItem = (id) => dispatch({ type: "REMOVE_ITEM", payload: id });
@@ -108,6 +113,7 @@ export function CartProvider({ children }) {
       value={{
         cart: state.items,
         addItem,
+        addItems,
         updateQty,
         removeItem,
         incrementQty,

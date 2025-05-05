@@ -24,6 +24,7 @@ import { usePhoneContext } from "@/context/PhoneContext";
 export default function CartSidebar({ width }) {
   const { cart, removeItem, incrementQty, decrementQty, clearCart, updateQty } =
     useCartContext();
+
   const route = useRouter();
 
   const calculateTotal = () => {

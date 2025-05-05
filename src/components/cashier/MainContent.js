@@ -70,6 +70,26 @@ export default function MainContent({ nav_width, cart_width }) {
       image: "laundry.jpg",
       category: "kiloan",
     },
+
+    {
+      id: 1,
+      name: "Cuci Setrika Express 6 Jam",
+      price: 15000,
+      eta_duration: 6,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "kiloan",
+    },
+   
+    {
+      id: 1,
+      name: "Cuci Setrika Express 6 Jam",
+      price: 20000,
+      eta_duration: 6,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "kiloan",
+    },
     {
       id: 2,
       name: "Cuci Setrika Express 24 Jam",

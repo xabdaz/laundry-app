@@ -28,6 +28,7 @@ import { getEtalase } from "@/services/pos";
 
 import CurrencyInput from "../CurrencyInput";
 
+
 export default function CheckoutSidebar({ nav_width, cart_width }) {
   const { cart, clearCart } = useCartContext();
   const { payloadOrder, setPayloadOrder, clearPayloadOrder, setNavbar } =
@@ -81,8 +82,56 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
 
   const handleCheckout = async () => {
     try {
+      console.log("Payment Method:", payloadOrder.payment_method);
+      const now = new Date();
+      const isoString = now.toISOString();
+      const payload = {
+        customer_name: `${payloadOrder.customer_name}`,
+        phone_number: `${payloadOrder.phone_number}`,
+        date_in: isoString,
+        date_out: "2025-04-27T18:00:00Z",
+        delivery_method: "delivery",
+        delivery_fee: 0,
+        total_price: payloadOrder.total_amount,
+        status: "Pending",
+        created_by: "admin",
+        payment: {
+          method: `${payloadOrder.payment_method}`
+        },
+        transaction_items: payloadOrder.items.map((item) => ({
+          laundry_variant_id: item.id,
+          price_per_unit: item.price,
+          estimated_finish_date: "2025-04-27T12:00:00Z",
+          quantity: item.quantity,
+          price_delivery_perkg: item.price_delivery_perKg,
+          status: "belum_diproses",
+          subtotal: ((item.quantity) * (item.price+item.price_delivery_perKg))
+        }))
+      };
+
+      const checkout = await postCheckout(payload);
+      console.log("Profile dari API:", checkout);
+
+      console.log("Request dari API:", payload);
+  
+      // Setelah berhasil dapat response, lanjut checkout
+      setOpenSuccessModal(true);
+  
+      setTimeout(() => {
+        route.push("/status");
+        setNavbar("status");
+        clearCart();
+        clearPayloadOrder();
+      }, 2200);
+  
+    } catch (error) {
+      console.error("Gagal hit API:", error);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
       console.log("Checkout payload:", payloadOrder);
-  // HIT API terlebih dahulu
       const now = new Date();
       const isoString = now.toISOString();
       const payload = {
@@ -104,24 +153,6 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
           status: "belum_diproses",
           subtotal: ((item.quantity) * (item.price+item.price_delivery_perKg))
         }))
-        // [
-        //   {
-        //     laundry_variant_id: 1,
-        //     quantity: 2.5,
-        //     price_per_unit: 25000,
-        //     subtotal: 62500,
-        //     estimated_finish_date: "2025-04-27T12:00:00Z",
-        //     status: "selesai"
-        //   },
-        //   {
-        //     laundry_variant_id: 2,
-        //     quantity: 1,
-        //     price_per_unit: 12500,
-        //     subtotal: 12500,
-        //     estimated_finish_date: "2025-04-27T18:00:00Z",
-        //     status: "selesai"
-        //   }
-        // ]
       };
 
       const checkout = await postCheckout(payload);
@@ -145,15 +176,15 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
   };
   
 
-  const handleSave = () => {
-    // Save the current state without completing checkout
-    setPayloadOrder((prev) => ({
-      ...prev,
-      status: "pending",
-    }));
-    console.log("Saved payload:", payloadOrder);
-    // You might want to add a toast or notification here
-  };
+  // const handleSave = () => {
+  //   // Save the current state without completing checkout
+  //   setPayloadOrder((prev) => ({
+  //     ...prev,
+  //     status: "pending",
+  //   }));
+  //   console.log("Saved payload:", payloadOrder);
+  //   // You might want to add a toast or notification here
+  // };
 
   return (
     <Box sx={{ overflow: "hidden", position: "relative" }}>
@@ -436,7 +467,11 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
                 fontSize: "16px",
               }}
               onClick={handleSave}
-              disabled={cart.length === 0}>
+              disabled={
+                cart.length === 0 ||
+                !payloadOrder.customer_name?.trim() ||
+                !payloadOrder.phone_number?.trim()
+              }>
               Simpan
             </Button>
           </Stack>
