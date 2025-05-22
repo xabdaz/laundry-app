@@ -16,7 +16,10 @@ export const getEtalase = async () => {
 };
 
 export const getListTransaction = async (page) => {
-  const response = await axios.get('listTransactions?page=${page}')
+  // const response = await axios.get('listTransactions?page=${page}')
+
+  console.log("transaction detail id:", page);
+  const response = await axios.get(`/listTransactions?page=${page}`);
   return response.data
 };
 
@@ -50,17 +53,8 @@ const fetchProduct = async () => {
 };
 
 export const getProductByEtalase = async (etalseId) => {
-  if (etalseId == 0) {
-    return fetchProduct
-  }
-  const laundryServices = [
-    {
-      id: 1,
-      name: "Cuci Setrika",
-      price: 10000,
-      image: "laundry.jpg",
-      category: "satuan-jas",
-    }
-  ];
-  return laundryServices
-}
+  const response = await axios.get(`/laundry-services?q=${etalseId}`);
+
+  console.log("transaction detail Prodct By Etalase:", response.data);
+  return response.data.data;
+};

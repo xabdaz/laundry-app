@@ -258,7 +258,7 @@ export default function CartSidebar({ nav_width, cart_width }) {
                     {item.name}
                   </Typography>
                   <Typography fontWeight={600} color="#000">
-                    {item.qty ? formatRupiah((item.price+item.price_delivery_perKg) * item.qty) : 0}
+                    {item.qty ? formatRupiah(Math.round((item.price+item.price_delivery_perKg) * item.qty)) : 0}
                   </Typography>
                 </Box>
 

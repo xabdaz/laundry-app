@@ -58,7 +58,9 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
 
   const handleCetakStruk = () => {
     localStorage.setItem("printData", JSON.stringify(transactionDetail));
-    router.push("/print/struk");
+    window.webkit.messageHandlers.jsHandler.postMessage(transactionDetail);
+
+    // router.push("/print/struk");
   };
   
   const handleCheckout = async () => {
@@ -214,7 +216,7 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
         <Divider />
 
         <Box p={2}>
-          <Button
+          {!transaction.isHasPayment && <Button
             variant="outlined"
             fullWidth
             sx={{
@@ -228,7 +230,7 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
             disabled={transaction?.isHasPayment || details.length === 0}
           >
             Pilih Metode Pembayaran
-          </Button>
+          </Button>}
 
           <Box display="flex" justifyContent="space-between" fontWeight="bold" mb={2}>
             <Typography
@@ -436,7 +438,7 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
                 <img
                   src="/qris.png"
                   alt="QRIS Payment"
-                  style={{ maxWidth: "40%", height: "auto" }}
+                  style={{ maxWidth: "35%", height: "auto" }}
                 />
               </Box>
             )}

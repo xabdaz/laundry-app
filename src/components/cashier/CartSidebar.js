@@ -28,8 +28,11 @@ export default function CartSidebar({ width }) {
   const route = useRouter();
 
   const calculateTotal = () => {
-    return cart.reduce((total, item) => total + (item.price + item.price_delivery_perKg) * item.qty, 0);
+    return Math.round(
+      cart.reduce((total, item) => total + (item.price + item.price_delivery_perKg) * item.qty, 0)
+    );
   };
+  
   const { refresh: fetchPhoneNumbersManually } = usePhoneContext();
 
   const handleCheckout = () => {
@@ -109,7 +112,7 @@ export default function CartSidebar({ width }) {
                       {item.name}
                     </Typography>
                     <Typography fontWeight={600} color="#000">
-                      {item.qty ? formatRupiah((item.price+item.price_delivery_perKg) * item.qty) : 0}
+                      {item.qty ? formatRupiah(Math.round((item.price+item.price_delivery_perKg) * item.qty)) : 0}
                     </Typography>
                   </Box>
                 </Box>

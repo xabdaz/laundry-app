@@ -1,4 +1,3 @@
-// MainContent.jsx
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -12,20 +11,23 @@ import {
   Skeleton,
   CircularProgress,
 } from "@mui/material";
+import { useInView } from "react-intersection-observer";
 import { formatRupiah } from "@/utils/helper";
-import { useTransaction } from "@/context/useEtalase";
 import { getTransactionDetail, getListTransaction } from "@/services/pos";
+
+const ITEMS_PER_PAGE = 10;
 
 export default function MainContent({ nav_width, cart_width, setShowCartSidebar, shouldRefresh, setShouldRefresh }) {
   const [value, setValue] = useState(0);
+  const [orders, setOrders] = useState([]);
   const [page, setPage] = useState(1);
-  const [allOrders, setAllOrders] = useState([]);
   const [hasMore, setHasMore] = useState(true);
-  const [loadingDetailId, setLoadingDetailId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadingDetailId, setLoadingDetailId] = useState(null);
   const scrollContainerRef = useRef(null);
 
-  const { data, isLoading } = useTransaction(page);
+  const { ref: lastItemRef, inView: isLastVisible } = useInView();
 
   const formatWIBTime = (isoString) => {
     const date = new Date(isoString);
@@ -46,11 +48,12 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
     return `${timePart} WIB, ${datePart}`;
   };
 
-  const fetchFreshTransaction = async () => {
+  const fetchTransactions = async (targetPage = 1, replace = false) => {
     try {
-      setIsRefreshing(true);
-      const freshData = await getListTransaction({ page: 1 });
-      const mapped = (freshData?.data || []).map((tx) => ({
+      if (targetPage === 1) setIsLoading(true);
+      console.log("ini target nya", targetPage)
+      const response = await getListTransaction(targetPage);
+      const mapped = (response?.data || []).map((tx) => ({
         id: tx.id,
         items: 1,
         name: tx.customer_name,
@@ -60,9 +63,21 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
         isHasPaid: tx.isHasPayment,
         status: tx.status === "pending" ? "Pending" : "Finished",
       }));
-      setAllOrders(mapped);
+
+      setOrders((prev) => (replace ? mapped : [...prev, ...mapped]));
+      setHasMore(mapped.length === ITEMS_PER_PAGE);
+    } catch (error) {
+      console.error("Gagal mengambil transaksi:", error);
+    } finally {
+      if (targetPage === 1) setIsLoading(false);
+    }
+  };
+
+  const fetchFreshTransaction = async () => {
+    try {
+      setIsRefreshing(true);
       setPage(1);
-      setHasMore(true);
+      await fetchTransactions(1, true);
     } catch (err) {
       console.error("Gagal pull to refresh:", err);
     } finally {
@@ -71,27 +86,8 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
   };
 
   useEffect(() => {
-    if (!data) return;
-    const mapped = data.map((tx) => ({
-      id: tx.id,
-      items: 1,
-      name: tx.customer_name,
-      phone_number: tx.phone_number,
-      time: formatWIBTime(tx.date_in),
-      total: tx.total_price,
-      isHasPaid: tx.isHasPayment,
-      status: tx.status === "pending" ? "Pending" : "Finished",
-    }));
-
-    if (page === 1) {
-      setAllOrders(mapped);
-      setHasMore(true);
-    } else if (mapped.length > 0) {
-      setAllOrders((prev) => [...prev, ...mapped]);
-    } else {
-      setHasMore(false);
-    }
-  }, [data, page]);
+    fetchTransactions(1, true);
+  }, []);
 
   useEffect(() => {
     if (shouldRefresh) {
@@ -101,17 +97,20 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
   }, [shouldRefresh, setShouldRefresh]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const nearBottom =
-        window.innerHeight + window.scrollY >=
-        document.body.offsetHeight - 300;
-      if (nearBottom && hasMore && !isLoading) {
-        setPage((prev) => prev + 1);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [hasMore, isLoading]);
+    console.log("page nya", page, isLoading);
+
+    if (isLastVisible) {
+    // if (isLastVisible && hasMore && !isLoading && !isRefreshing) {
+      setPage((prev) => prev + 1);
+    }
+  }, [isLastVisible, hasMore, isLoading, isRefreshing]);
+
+  useEffect(() => {
+    if (page !== 1) {
+      console.log("page nya ini", page);
+      fetchTransactions(page);
+    }
+  }, [page]);
 
   const handleSelectOrder = async (order) => {
     try {
@@ -129,8 +128,8 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
 
   const filteredOrders =
     value === 0
-      ? allOrders
-      : allOrders.filter((order) =>
+      ? orders
+      : orders.filter((order) =>
           value === 1
             ? order.status === "Pending"
             : order.status === "Finished"
@@ -179,86 +178,90 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
           </Typography>
         )}
 
-        {filteredOrders.map((order) => (
-          <Paper
-            key={order.id}
-            onClick={() => handleSelectOrder(order)}
-            sx={{
-              cursor: "pointer",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              px: 3,
-              mb: 2,
-              py: 2,
-              bgcolor: "#fff",
-              color: "#000",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-              opacity: loadingDetailId === order.id ? 0.6 : 1,
-            }}
-          >
-            <Box>
-              <Typography fontWeight="bold">Order #{order.id}</Typography>
-              <Typography fontWeight="bold">Nama : {order.name} ({order.phone_number})</Typography>
-              <Typography fontSize={14} pt={3}>Total Item <b>{order.items}</b></Typography>
-            </Box>
-            <Box textAlign="right">
-              <Typography variant="body2">{order.time}</Typography>
-              <Chip
-                label={order.isHasPaid ? "Sudah Bayar" : "Belum Bayar"}
+        {isLoading && page === 1
+          ? [...Array(3)].map((_, index) => (
+              <Paper
+                key={`skeleton-${index}`}
                 sx={{
-                  fontSize: 12,
-                  bgcolor: order.isHasPaid ? "#38d46e" : "#FF0000",
-                  color: "#fff",
-                  height: 24,
-                  borderRadius: "12px",
-                  fontWeight: 600,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  px: 3,
+                  mb: 2,
+                  py: 2,
+                  bgcolor: "#fff",
+                  color: "#000",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
                 }}
-              />
-              <Box display="flex" alignItems="center" gap={2} pt={3}>
-                <Typography fontWeight="bold">{formatRupiah(order.total)}</Typography>
-              </Box>
-              {loadingDetailId === order.id && (
-                <Box mt={1}>
-                  <CircularProgress size={16} thickness={4} />
+              >
+                <Box>
+                  <Skeleton variant="text" width={120} height={24} />
+                  <Skeleton variant="text" width={100} height={20} sx={{ mt: 2 }} />
                 </Box>
-              )}
-            </Box>
-          </Paper>
-        ))}
+                <Box textAlign="right">
+                  <Skeleton variant="text" width={60} height={18} />
+                  <Box display="flex" justifyContent="flex-end" gap={1} pt={2}>
+                    <Skeleton variant="text" width={80} height={22} />
+                    <Skeleton variant="rounded" width={60} height={24} />
+                  </Box>
+                </Box>
+              </Paper>
+            ))
+          : filteredOrders.map((order, index) => {
+              const isLast = index === filteredOrders.length - 1;
+              return (
+                <Paper
+                  key={order.id}
+                  ref={isLast ? lastItemRef : null}
+                  onClick={() => handleSelectOrder(order)}
+                  sx={{
+                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    px: 3,
+                    mb: 2,
+                    py: 2,
+                    bgcolor: "#fff",
+                    color: "#000",
+                    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+                    opacity: loadingDetailId === order.id ? 0.6 : 1,
+                  }}
+                >
+                  <Box>
+                    <Typography fontWeight="bold">Order #{order.id}</Typography>
+                    <Typography fontWeight="bold">Nama : {order.name} ({order.phone_number})</Typography>
+                    <Typography fontSize={14} pt={3}>Total Item <b>{order.items}</b></Typography>
+                  </Box>
+                  <Box textAlign="right">
+                    <Typography variant="body2">{order.time}</Typography>
+                    <Chip
+                      label={order.isHasPaid ? "Sudah Bayar" : "Belum Bayar"}
+                      sx={{
+                        fontSize: 12,
+                        bgcolor: order.isHasPaid ? "#38d46e" : "#FF0000",
+                        color: "#fff",
+                        height: 24,
+                        borderRadius: "12px",
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Box display="flex" alignItems="center" gap={2} pt={3}>
+                      <Typography fontWeight="bold">{formatRupiah(order.total)}</Typography>
+                    </Box>
+                    {loadingDetailId === order.id && (
+                      <Box mt={1}>
+                        <CircularProgress size={16} thickness={4} />
+                      </Box>
+                    )}
+                  </Box>
+                </Paper>
+              );
+            })}
 
-        {isLoading && [...Array(3)].map((_, index) => (
-          <Paper
-            key={`skeleton-${index}`}
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              px: 3,
-              mb: 2,
-              py: 2,
-              bgcolor: "#fff",
-              color: "#000",
-              boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-            }}
-          >
-            <Box>
-              <Skeleton variant="text" width={120} height={24} />
-              <Skeleton variant="text" width={100} height={20} sx={{ mt: 2 }} />
-            </Box>
-            <Box textAlign="right">
-              <Skeleton variant="text" width={60} height={18} />
-              <Box display="flex" justifyContent="flex-end" gap={1} pt={2}>
-                <Skeleton variant="text" width={80} height={22} />
-                <Skeleton variant="rounded" width={60} height={24} />
-              </Box>
-            </Box>
-          </Paper>
-        ))}
-
-        {!hasMore && !isLoading && allOrders.length > 0 && (
+        {!isLoading && filteredOrders.length === 0 && (
           <Typography textAlign="center" py={2} color="gray">
-            Semua data sudah ditampilkan.
+            Tidak ada data transaksi.
           </Typography>
         )}
       </Box>

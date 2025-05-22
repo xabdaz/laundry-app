@@ -49,6 +49,7 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
         name: item.name,
         price: item.price,
         quantity: item.qty,
+        durationHour: item.eta_duration,
         price_delivery_perKg: item.price_delivery_perKg
       })),
       total_amount: calculateTotal(),
@@ -70,8 +71,11 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
   }, [cart, paymentMethod, selectedCard, cardInfo]);
 
   const calculateTotal = () => {
-    return cart.reduce((total, item) => total + (item.price + item.price_delivery_perKg) * item.qty, 0);
+    return Math.round(
+      cart.reduce((total, item) => total + (item.price + item.price_delivery_perKg) * item.qty, 0)
+    );
   };
+  
 
   const handleCardInfoChange = (field, value) => {
     setCardInfo((prev) => ({
@@ -82,14 +86,18 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
 
   const handleCheckout = async () => {
     try {
-      console.log("Payment Method:", payloadOrder.payment_method);
+      console.log("Payment Method:", payloadOrder);
+      const items = payloadOrder.items
       const now = new Date();
+      const maxDuration = Math.max(...items.map(item => item.durationHour));
+
+      const endDate = new Date(now.getTime() + maxDuration * 60 * 60 * 1000);
       const isoString = now.toISOString();
       const payload = {
         customer_name: `${payloadOrder.customer_name}`,
         phone_number: `${payloadOrder.phone_number}`,
         date_in: isoString,
-        date_out: "2025-04-27T18:00:00Z",
+        date_out: endDate.toISOString(),
         delivery_method: "delivery",
         delivery_fee: 0,
         total_price: payloadOrder.total_amount,
@@ -101,11 +109,11 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
         transaction_items: payloadOrder.items.map((item) => ({
           laundry_variant_id: item.id,
           price_per_unit: item.price,
-          estimated_finish_date: "2025-04-27T12:00:00Z",
+          estimated_finish_date: finishDate(item.durationHour),
           quantity: item.quantity,
           price_delivery_perkg: item.price_delivery_perKg,
           status: "belum_diproses",
-          subtotal: ((item.quantity) * (item.price+item.price_delivery_perKg))
+          subtotal: Math.round((item.quantity) * (item.price+item.price_delivery_perKg))
         }))
       };
 
@@ -128,17 +136,27 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
       console.error("Gagal hit API:", error);
     }
   };
+  
+  const finishDate = (duration) => {
+    const now = new Date(); // Pindahkan definisi now ke dalam fungsi
+    const endDate = new Date(now.getTime() + duration * 60 * 60 * 1000);
+    return endDate.toISOString(); // Perbaiki dari isoString() jadi toISOString()
+  };
 
   const handleSave = async () => {
     try {
       console.log("Checkout payload:", payloadOrder);
+      const items = payloadOrder.items
       const now = new Date();
+      const maxDuration = Math.max(...items.map(item => item.durationHour));
+
+      const endDate = new Date(now.getTime() + maxDuration * 60 * 60 * 1000);
       const isoString = now.toISOString();
       const payload = {
         customer_name: `${payloadOrder.customer_name}`,
         phone_number: `${payloadOrder.phone_number}`,
         date_in: isoString,
-        date_out: "2025-04-27T18:00:00Z",
+        date_out: endDate.toISOString(),
         delivery_method: "delivery",
         delivery_fee: 0,
         total_price: payloadOrder.total_amount,
@@ -147,11 +165,11 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
         transaction_items: payloadOrder.items.map((item) => ({
           laundry_variant_id: item.id,
           price_per_unit: item.price,
-          estimated_finish_date: "2025-04-27T12:00:00Z",
+          estimated_finish_date: finishDate(item.durationHour),
           quantity: item.quantity,
           price_delivery_perkg: item.price_delivery_perKg,
           status: "belum_diproses",
-          subtotal: ((item.quantity) * (item.price+item.price_delivery_perKg))
+          subtotal: Math.round((item.quantity) * (item.price+item.price_delivery_perKg))
         }))
       };
 
