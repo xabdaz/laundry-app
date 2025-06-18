@@ -440,7 +440,7 @@ export default function MainContent({ nav_width, cart_width }) {
     {
       id: 45,
       name: "Sepatu Express 2-3 Hari",
-      price: 45000,
+      price: 40000,
       eta_duration: 72,
       price_delivery_perKg: 0,
       image: "laundry.jpg",
@@ -463,10 +463,65 @@ export default function MainContent({ nav_width, cart_width }) {
       price_delivery_perKg: 0,
       image: "laundry.jpg",
       category: "satuan"
-    }
+    },
+    {
+      id: 50,
+      name: "[Satuan Topi]",
+      price: 7000,
+      eta_duration: 72,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "satuan"
+    },
+    {
+      id: 51,
+      name: "[Satuan] Gorden Kecil",
+      price: 25000,
+      eta_duration: 72,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "satuan"
+    },
+    {
+      id: 52,
+      name: "[Satuan] Gorden Sedang",
+      price: 35000,
+      eta_duration: 72,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "satuan"
+    },
+    {
+      id: 53,
+      name: "[Satuan] Gorden Besar",
+      price: 50000,
+      eta_duration: 72,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "satuan"
+    },
+    {
+      id: 54,
+      name: "[Satuan] Handuk",
+      price: 7000,
+      eta_duration: 72,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "kiloan",
+    },
   ];
 
   const laundryServicesOffline = [
+
+    {
+      id: 54,
+      name: "[Satuan] Handuk",
+      price: 7000,
+      eta_duration: 72,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "kiloan",
+    },
     {
       id: 25,
       name: "Cuci Setrika Regular 2/3 Hari(Promo)",
@@ -839,7 +894,7 @@ export default function MainContent({ nav_width, cart_width }) {
     {
       id: 45,
       name: "Sepatu Express 2-3 Hari",
-      price: 45000,
+      price: 40000,
       eta_duration: 72,
       price_delivery_perKg: 0,
       image: "laundry.jpg",
@@ -862,7 +917,62 @@ export default function MainContent({ nav_width, cart_width }) {
       price_delivery_perKg: 0,
       image: "laundry.jpg",
       category: "satuan"
-    }
+    },
+
+    {
+      id: 48,
+      name: "Stroler Regular 14 Hari",
+      price: 50000,
+      eta_duration: 336,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "satuan"
+    },
+    {
+      id: 49,
+      name: "Cuci Sepatu Kilat 1 Hari",
+      price: 55000,
+      eta_duration: 24,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "satuan"
+    },
+    {
+      id: 50,
+      name: "[Satuan Topi]",
+      price: 7000,
+      eta_duration: 72,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "satuan"
+    },
+    {
+      id: 51,
+      name: "[Satuan] Gorden Kecil",
+      price: 25000,
+      eta_duration: 72,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "satuan"
+    },
+    {
+      id: 52,
+      name: "[Satuan] Gorden Sedang",
+      price: 35000,
+      eta_duration: 72,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "satuan"
+    },
+    {
+      id: 53,
+      name: "[Satuan] Gorden Besar",
+      price: 50000,
+      eta_duration: 72,
+      price_delivery_perKg: 0,
+      image: "laundry.jpg",
+      category: "satuan"
+    },
   ];
   const [value, setValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
