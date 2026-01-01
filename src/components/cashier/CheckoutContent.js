@@ -229,7 +229,7 @@ export default function CartSidebar({ nav_width, cart_width }) {
                 }}
               >
                 <img
-                  src={`/${item.image}`}
+                  src={`${item.image}`}
                   alt={item.name}
                   style={{
                     width: "100%",
@@ -258,7 +258,9 @@ export default function CartSidebar({ nav_width, cart_width }) {
                     {item.name}
                   </Typography>
                   <Typography fontWeight={600} color="#000">
-                    {item.qty ? formatRupiah(Math.round((item.price+item.price_delivery_perKg) * item.qty)) : 0}
+                    {
+                      item.qty >= item.minimum_purchase ? formatRupiah(Math.round((item.price+item.price_delivery_perKg) * item.qty)) : formatRupiah(item.minimum_price)
+                    }
                   </Typography>
                 </Box>
 

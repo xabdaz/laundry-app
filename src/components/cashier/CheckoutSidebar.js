@@ -48,6 +48,8 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
         id: item.id,
         name: item.name,
         price: item.price,
+        minimum_purchase: item.minimum_purchase,
+        minimum_price: item.minimum_price,
         quantity: item.qty,
         durationHour: item.eta_duration,
         price_delivery_perKg: item.price_delivery_perKg
@@ -72,7 +74,14 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
 
   const calculateTotal = () => {
     return Math.round(
-      cart.reduce((total, item) => total + (item.price + item.price_delivery_perKg) * item.qty, 0)
+      cart.reduce((total, item) => {
+        const totalItemPrice = (item.price + item.price_delivery_perKg) * item.qty;
+        const subtotal =
+          item.qty >= item.minimum_purchase
+            ? Math.round(totalItemPrice)
+            : item.minimum_price;
+        return total + subtotal;
+      }, 0)
     );
   };
   
@@ -108,12 +117,18 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
         },
         transaction_items: payloadOrder.items.map((item) => ({
           laundry_variant_id: item.id,
-          price_per_unit: item.price,
+          laundry_name: item.name,
+          price_per_unit: item.quantity <= item.minimum_purchase
+          ? (item.minimum_price)
+          : Math.round((item.price)),
           estimated_finish_date: finishDate(item.durationHour),
           quantity: item.quantity,
           price_delivery_perkg: item.price_delivery_perKg,
           status: "belum_diproses",
-          subtotal: Math.round((item.quantity) * (item.price+item.price_delivery_perKg))
+          subtotal: 
+              item.quantity <= item.minimum_purchase
+              ? (item.minimum_price + item.price_delivery_perKg)
+              : Math.round(item.quantity * (item.price + item.price_delivery_perKg)),
         }))
       };
 
@@ -121,7 +136,38 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
       console.log("Profile dari API:", checkout);
 
       console.log("Request dari API:", payload);
+      const transactionDetail = {
+        transaction: {
+          id: checkout.transaction_id,
+          created_at: now.toISOString(),
+          created_by: payload.created_by,
+          customer_name: payload.customer_name,
+          date_in: payload.date_in,
+          date_out: payload.date_out,
+          delivery_fee: payload.delivery_fee,
+          delivery_method: payload.delivery_method,
+          invoice_number: null,
+          isHasPayment: true,
+          phone_number: payload.phone_number,
+          status: payload.status,
+          total_price: payload.total_price,
+        },
+        details: payload.transaction_items.map(item => ({
+          laundry_variant_id: item.laundry_variant_id,
+          product_name: item.laundry_name,
+          quantity: item.quantity,
+          subtotal: item.subtotal,
+          price_per_unit_custom: item.price_per_unit + item.price_delivery_perkg,
+          price_per_unit: item.price_per_unit,
+          price_delivery_perkg: item.price_delivery_perkg,
+          estimated_finish_date: item.estimated_finish_date,
+          status: item.status,
+        })),
+      };
   
+      // Kirim ke WebKit
+      await window.webkit.messageHandlers.strukOffline.postMessage(transactionDetail);
+
       // Setelah berhasil dapat response, lanjut checkout
       setOpenSuccessModal(true);
   
@@ -142,43 +188,81 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
     const endDate = new Date(now.getTime() + duration * 60 * 60 * 1000);
     return endDate.toISOString(); // Perbaiki dari isoString() jadi toISOString()
   };
-
   const handleSave = async () => {
     try {
-      console.log("Checkout payload:", payloadOrder);
-      const items = payloadOrder.items
+      const items = payloadOrder.items;
       const now = new Date();
       const maxDuration = Math.max(...items.map(item => item.durationHour));
-
       const endDate = new Date(now.getTime() + maxDuration * 60 * 60 * 1000);
-      const isoString = now.toISOString();
+  
+      // Payload untuk API checkout
       const payload = {
-        customer_name: `${payloadOrder.customer_name}`,
-        phone_number: `${payloadOrder.phone_number}`,
-        date_in: isoString,
+        customer_name: payloadOrder.customer_name,
+        phone_number: payloadOrder.phone_number,
+        date_in: now.toISOString(),
         date_out: endDate.toISOString(),
         delivery_method: "delivery",
         delivery_fee: 0,
         total_price: payloadOrder.total_amount,
         status: "Pending",
         created_by: "admin",
-        transaction_items: payloadOrder.items.map((item) => ({
+        transaction_items: items.map((item) => ({
           laundry_variant_id: item.id,
-          price_per_unit: item.price,
+          laundry_name: item.name,
+          price_per_unit:
+            item.quantity <= item.minimum_purchase
+              ? item.minimum_price
+              : Math.round(item.price),
           estimated_finish_date: finishDate(item.durationHour),
           quantity: item.quantity,
           price_delivery_perkg: item.price_delivery_perKg,
           status: "belum_diproses",
-          subtotal: Math.round((item.quantity) * (item.price+item.price_delivery_perKg))
-        }))
+          subtotal:
+            item.quantity <= item.minimum_purchase
+              ? item.minimum_price + item.price_delivery_perKg
+              : Math.round(item.quantity * (item.price + item.price_delivery_perKg)),
+        })),
       };
-
-      const checkout = await postCheckout(payload);
-      console.log("Profile dari API:", checkout);
-
-      console.log("Request dari API:", payload);
   
-      // Setelah berhasil dapat response, lanjut checkout
+      console.log("Checkout payload:", payload);
+  
+      // Kirim ke API checkout
+      const checkout = await postCheckout(payload);
+  
+      // Setelah berhasil, buat object sesuai Swift struct
+      const transactionDetail = {
+        transaction: {
+          id: checkout.transaction_id,
+          created_at: now.toISOString(),
+          created_by: payload.created_by,
+          customer_name: payload.customer_name,
+          date_in: payload.date_in,
+          date_out: payload.date_out,
+          delivery_fee: payload.delivery_fee,
+          delivery_method: payload.delivery_method,
+          invoice_number: null,
+          isHasPayment: false,
+          phone_number: payload.phone_number,
+          status: payload.status,
+          total_price: payload.total_price,
+        },
+        details: payload.transaction_items.map(item => ({
+          laundry_variant_id: item.laundry_variant_id,
+          product_name: item.laundry_name,
+          quantity: item.quantity,
+          subtotal: item.subtotal,
+          price_per_unit_custom: (item.price_per_unit+item.price_delivery_perkg),
+          price_per_unit: item.price_per_unit,
+          price_delivery_perkg: item.price_delivery_perkg,
+          estimated_finish_date: item.estimated_finish_date,
+          status: item.status,
+        })),
+      };
+  
+      // Kirim ke WebKit handler
+      await window.webkit.messageHandlers.strukOffline.postMessage(transactionDetail);
+  
+      // Tampilkan modal berhasil
       setOpenSuccessModal(true);
   
       setTimeout(() => {
@@ -192,6 +276,7 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
       console.error("Gagal hit API:", error);
     }
   };
+  
   
 
   // const handleSave = () => {

@@ -11,18 +11,19 @@ import { PiCashRegisterDuotone } from "react-icons/pi";
 import { useRouter, usePathname } from "next/navigation";
 
 
-function SidebarButton({ icon: Icon, label }) {
+function SidebarButton({ icon: Icon, label, routePath }) {
   const { navbar, setNavbar } = useGeneral();
   const route = useRouter();
   const pathname = usePathname();
 
-  const targetPath = label === "home" ? "/" : `/${label}`;
+  const targetPath = routePath || (label === "home" ? "/" : `/${label}`);
+  
   const isActive =
     label === "home" ? pathname === "/" : pathname.startsWith(targetPath);
 
   const handleClick = () => {
     if (label !== "logout") {
-      route.push(label === "home" ? "/" : `/${label}`);
+      route.push(targetPath);
       setNavbar(label);
     }
   };
@@ -104,10 +105,10 @@ export default function NavigationSidebar({ width }) {
             width="100%"
             px={2}
             marginBottom={6}>
-            <SidebarButton icon={FiHome} label="home" />
+            <SidebarButton icon={FiHome} label="home" routePath="/"/>
             <SidebarButton icon={PiCashRegisterDuotone} label="cashier" />
             <SidebarButton icon={GrTransaction} label="status" />
-            <SidebarButton icon={FiSettings} label="setting" />
+            <SidebarButton icon={PiCashRegisterDuotone} label="New Cashier" routePath="/setting" />
             <SidebarButton icon={TbLogout} label="logout" />
           </Stack>
         </Box>

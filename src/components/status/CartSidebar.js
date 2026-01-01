@@ -56,9 +56,23 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
     setTransactionDetail(null);
   };
 
-  const handleCetakStruk = () => {
+  const strukOnline = () => {
     localStorage.setItem("printData", JSON.stringify(transactionDetail));
-    window.webkit.messageHandlers.jsHandler.postMessage(transactionDetail);
+    window.webkit.messageHandlers.strukOnline.postMessage(transactionDetail);
+
+    // router.push("/print/struk");
+  };
+
+  const strukMini = () => {
+    localStorage.setItem("printData", JSON.stringify(transactionDetail));
+    window.webkit.messageHandlers.strukMini.postMessage(transactionDetail);
+
+    // router.push("/print/struk");
+  };
+  
+  const strukOffline = () => {
+    localStorage.setItem("printData", JSON.stringify(transactionDetail));
+    window.webkit.messageHandlers.strukOffline.postMessage(transactionDetail);
 
     // router.push("/print/struk");
   };
@@ -251,6 +265,22 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
             </Typography>
           </Box>
           <Stack spacing={1}>
+          <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              sx={{
+                bgcolor: "#003049",
+                height: "50px",
+                fontWeight: "600",
+                textTransform: "capitalize",
+                fontSize: "16px",
+              }}
+              onClick={strukMini}
+              disabled={details.length === 0}
+            >
+              Struk Note
+            </Button>
             <Button
               variant="contained"
               color="primary"
@@ -262,10 +292,26 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
                 textTransform: "capitalize",
                 fontSize: "16px",
               }}
-              onClick={handleCetakStruk}
+              onClick={strukOnline}
               disabled={details.length === 0}
             >
-              Cetak Struk
+              Struk Antar Jemput 
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              sx={{
+                bgcolor: "#003049",
+                height: "50px",
+                fontWeight: "600",
+                textTransform: "capitalize",
+                fontSize: "16px",
+              }}
+              onClick={strukOffline}
+              disabled={details.length === 0}
+            >
+              Struk Offline
             </Button>
             {!transaction?.isHasPayment && (
               <Button
@@ -316,7 +362,7 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
               paymentMethod === "" 
             }
            >
-            Save
+            Save Metode
           </IconButton>
         </DialogTitle>
         <DialogContent>

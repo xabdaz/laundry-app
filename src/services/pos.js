@@ -15,12 +15,16 @@ export const getEtalase = async () => {
   return response.data
 };
 
-export const getListTransaction = async (page) => {
-  // const response = await axios.get('listTransactions?page=${page}')
+export const getListTransaction = async (page, isPayment) => {
+  const params = new URLSearchParams();
+  params.append("page", page);
 
-  console.log("transaction detail id:", page);
-  const response = await axios.get(`/listTransactions?page=${page}`);
-  return response.data
+  if (typeof isPayment === "boolean") {
+    params.append("isPayment", isPayment); // hanya ditambahkan kalau boolean
+  }
+
+  const response = await axios.get(`/listTransactions?${params.toString()}`);
+  return response.data;
 };
 
 export const paymentTransaction = async (payload) => {
@@ -54,6 +58,12 @@ const fetchProduct = async () => {
 
 export const getProductByEtalase = async (etalseId) => {
   const response = await axios.get(`/laundry-services?q=${etalseId}`);
+
+  console.log("transaction detail Prodct By Etalase:", response.data);
+  return response.data.data;
+};
+export const getVariantByProduct = async (productId) => {
+  const response = await axios.get(`/laundry-variants?laundry_service_id=${productId}`);
 
   console.log("transaction detail Prodct By Etalase:", response.data);
   return response.data.data;

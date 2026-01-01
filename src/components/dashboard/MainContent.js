@@ -83,13 +83,32 @@ import {
   TextField,
   Grid,
   Paper,
-  Divider
+  Divider,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Slide,
+  IconButton,
+  Stack,
+  CircularProgress,
 } from "@mui/material";
-import { getProductByEtalase } from "@/services/pos";
+import { getProductByEtalase, getVariantByProduct } from "@/services/pos";
+import { useCartContext } from "@/context/CartContext";
+
+// Transition untuk Dialog
+const Transition = React.forwardRef(function Transition(props, ref) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
 
 export default function POSTablePage({ nav_width, cart_width }) {
   const [services, setServices] = useState([]);
   const [search, setSearch] = useState("");
+  const [isVariantVisible, setOpenVariant] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [variants, setVariants] = useState([]);
+  const [loadingVariant, setLoadingVariant] = useState(false);
+
+  const { addItem } = useCartContext();
 
   useEffect(() => {
     getProductByEtalase("").then((data) => {
@@ -102,10 +121,25 @@ export default function POSTablePage({ nav_width, cart_width }) {
       getProductByEtalase(search).then((data) => {
         setServices(data);
       });
-    }, 400); // debounce 400ms
+    }, 400);
 
     return () => clearTimeout(delayDebounce);
   }, [search]);
+
+  const handleOpenVariant = async (product) => {
+    setSelectedProduct(product);
+    setLoadingVariant(true);
+    try {
+      const data = await getVariantByProduct(product.id);
+      setVariants(data);
+    } catch (error) {
+      console.error("Error fetching variants:", error);
+      setVariants([]);
+    } finally {
+      setLoadingVariant(false);
+      setOpenVariant(true);
+    }
+  };
 
   return (
     <Box
@@ -120,7 +154,9 @@ export default function POSTablePage({ nav_width, cart_width }) {
         p: 4,
       }}
     >
-      <Typography variant="h5" fontWeight="bold" mb={2}>POS Laundry</Typography>
+      <Typography variant="h5" fontWeight="bold" mb={2}>
+        POS Laundry
+      </Typography>
 
       <TextField
         fullWidth
@@ -136,14 +172,21 @@ export default function POSTablePage({ nav_width, cart_width }) {
           <Grid item xs={6} md={4} lg={3} key={item.id}>
             <Paper
               sx={{ p: 2, cursor: "pointer", textAlign: "center", height: "100%" }}
-              onClick={() => alert(`Pilih: ${item.name}`)}
+              onClick={() => handleOpenVariant(item)}
             >
-              <Typography fontWeight="bold" fontSize={16} mb={1}>{item.name}</Typography>
+              <Typography fontWeight="bold" fontSize={16} mb={1}>
+                {item.name}
+              </Typography>
               <Divider sx={{ my: 1 }} />
-              <Typography fontSize={14} color="text.secondary">Kategori: {item.category}</Typography>
-              <Typography fontSize={14} color="text.secondary">Tipe: {item.type}</Typography>
               <Typography fontSize={14} color="text.secondary">
-                Delivery: Rp{item.price_delivery_per_kg.toLocaleString("id-ID")}/kg
+                Kategori: {item.category}
+              </Typography>
+              <Typography fontSize={14} color="text.secondary">
+                Tipe: {item.type}
+              </Typography>
+              <Typography fontSize={14} color="text.secondary">
+                Delivery: Rp
+                {item.price_delivery_per_kg.toLocaleString("id-ID")}/kg
               </Typography>
               <Typography fontSize={12} mt={1} color="gray">
                 Dibuat: {new Date(item.created_at).toLocaleDateString("id-ID")}
@@ -152,6 +195,102 @@ export default function POSTablePage({ nav_width, cart_width }) {
           </Grid>
         ))}
       </Grid>
+
+      {/* Dialog Detail Variant */}
+      <Dialog
+        fullScreen
+        open={isVariantVisible}
+        onClose={() => setOpenVariant(false)}
+        TransitionComponent={Transition}
+      >
+        <DialogTitle
+          sx={{
+            backgroundColor: "#003049",
+            color: "white",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          {selectedProduct?.name || "Laundry Variant"}
+          <IconButton
+            color="inherit"
+            onClick={() => setOpenVariant(false)}
+            edge="end"
+          >
+            ✖
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent>
+          {loadingVariant ? (
+            <Stack alignItems="center" py={4}>
+              <CircularProgress />
+              <Typography mt={2}>Memuat varian...</Typography>
+            </Stack>
+          ) : (
+            <Stack spacing={2} pt={2}>
+              {variants.length === 0 ? (
+                <Typography>Tidak ada varian tersedia.</Typography>
+              ) : (
+                variants.map((variant) => (
+                  <Paper
+                    key={variant.id}
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 2, 
+                      p: 2, 
+                      mb: 1,
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => {
+                      let service = {
+                        id: variant.id,
+                        name: `[${selectedProduct.name}] ${variant.name}`,
+                        price: variant.price,
+                        eta_duration: variant.eta_duration,
+                        price_delivery_perKg: variant.price_delivery_per_kg,
+                        image: variant.image_url,
+                        category: selectedProduct.category,
+                        minimum_purchase: variant.minimum,
+                        minimum_price: variant.minimum*variant.price,
+                      };
+                      addItem(service);
+                      setOpenVariant(false);
+                    }}
+                  >
+                    {/* Image di kiri */}
+                    <img
+                      src={variant.image_url}
+                      alt={variant.name}
+                      style={{
+                        width: 80,
+                        height: 80,
+                        objectFit: "cover",
+                        borderRadius: 8,
+                        backgroundColor: "white",
+                      }}
+                    />
+                
+                    {/* Konten di kanan */}
+                    <Box sx={{ flex: 1 }}>
+                      <Typography fontWeight="bold">{variant.name}</Typography>
+                      <Typography fontSize={14} color="text.secondary">
+                        Harga: Rp{variant.price.toLocaleString("id-ID")} / {variant.unit_label}
+                      </Typography>
+                      <Typography fontSize={12} color="gray">
+                        Estiamsi: {variant.eta_duration>23 ? Math.ceil(variant.eta_duration / 24) : variant.eta_duration} { variant.eta_duration<24 ? "Jam" : "hari" }
+                      </Typography>
+                    </Box>
+                  </Paper>
+                ))
+                
+              )}
+            </Stack>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

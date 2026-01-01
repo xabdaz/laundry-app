@@ -29,9 +29,16 @@ export default function CartSidebar({ width }) {
 
   const calculateTotal = () => {
     return Math.round(
-      cart.reduce((total, item) => total + (item.price + item.price_delivery_perKg) * item.qty, 0)
+      cart.reduce((total, item) => {
+        const totalItemPrice = (item.price + item.price_delivery_perKg) * item.qty;
+        const subtotal =
+          item.qty >= item.minimum_purchase
+            ? Math.round(totalItemPrice)
+            : item.minimum_price;
+        return total + subtotal;
+      }, 0)
     );
-  };
+  };  
   
   const { refresh: fetchPhoneNumbersManually } = usePhoneContext();
 
@@ -112,7 +119,9 @@ export default function CartSidebar({ width }) {
                       {item.name}
                     </Typography>
                     <Typography fontWeight={600} color="#000">
-                      {item.qty ? formatRupiah(Math.round((item.price+item.price_delivery_perKg) * item.qty)) : 0}
+                      {
+                      item.qty >= item.minimum_purchase ? formatRupiah(Math.round((item.price+item.price_delivery_perKg) * item.qty)) : formatRupiah(item.minimum_price)
+                      }
                     </Typography>
                   </Box>
                 </Box>

@@ -48,11 +48,17 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
     return `${timePart} WIB, ${datePart}`;
   };
 
-  const fetchTransactions = async (targetPage = 1, replace = false) => {
+  const getIsPaymentValue = (tabValue) => {
+    if (tabValue === 1) return false; // Belum Bayar
+    if (tabValue === 2) return true;  // Sudah Bayar
+    return null;                      // Semua (tanpa filter)
+  };
+
+  const fetchTransactions = async (targetPage = 1, replace = false, isPayment = null) => {
     try {
       if (targetPage === 1) setIsLoading(true);
-      console.log("ini target nya", targetPage)
-      const response = await getListTransaction(targetPage);
+      const response = await getListTransaction(targetPage, isPayment);
+  
       const mapped = (response?.data || []).map((tx) => ({
         id: tx.id,
         items: 1,
@@ -63,7 +69,7 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
         isHasPaid: tx.isHasPayment,
         status: tx.status === "pending" ? "Pending" : "Finished",
       }));
-
+  
       setOrders((prev) => (replace ? mapped : [...prev, ...mapped]));
       setHasMore(mapped.length === ITEMS_PER_PAGE);
     } catch (error) {
@@ -75,19 +81,27 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
 
   const fetchFreshTransaction = async () => {
     try {
-      setIsRefreshing(true);
+      // Reset ke setelan default
+      setOrders([]);
       setPage(1);
-      await fetchTransactions(1, true);
+      setHasMore(true);
+      setIsLoading(true);
+      setIsRefreshing(true);
+  
+      // Fetch halaman 1 sesuai tab aktif
+      await fetchTransactions(1, true, getIsPaymentValue(value));
     } catch (err) {
       console.error("Gagal pull to refresh:", err);
     } finally {
       setIsRefreshing(false);
+      setIsLoading(false);
     }
   };
-
+  
   useEffect(() => {
-    fetchTransactions(1, true);
-  }, []);
+    setPage(1);
+    fetchTransactions(1, true, getIsPaymentValue(value));
+  }, [value]);
 
   useEffect(() => {
     if (shouldRefresh) {
@@ -107,10 +121,9 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
 
   useEffect(() => {
     if (page !== 1) {
-      console.log("page nya ini", page);
-      fetchTransactions(page);
+      fetchTransactions(page, false, getIsPaymentValue(value)); // ✅ Kirim isPayment sesuai tab
     }
-  }, [page]);
+  }, [page, value]);
 
   const handleSelectOrder = async (order) => {
     try {
@@ -127,13 +140,14 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
   };
 
   const filteredOrders =
-    value === 0
-      ? orders
-      : orders.filter((order) =>
-          value === 1
-            ? order.status === "Pending"
-            : order.status === "Finished"
-        );
+    // value === 0
+      // ? 
+      orders
+      // : orders.filter((order) =>
+      //     value === 1
+      //       ? order.status === "Pending"
+      //       : order.status === "Finished"
+      //   );
 
   return (
     <Box sx={{
@@ -155,8 +169,8 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
       }}>
         <Tabs value={value} onChange={(e, v) => setValue(v)} sx={{ mb: 2 }}>
           <Tab label="Semua" value={0} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
-          <Tab label="Pending" value={1} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
-          <Tab label="Selesai" value={2} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
+          <Tab label="Belum Bayar" value={1} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
+          <Tab label="Sudah Bayar" value={2} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
         </Tabs>
       </Box>
 
