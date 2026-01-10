@@ -19,6 +19,8 @@ import { FaRegCreditCard } from "react-icons/fa6";
 import { BsCash } from "react-icons/bs";
 import { IoQrCodeOutline } from "react-icons/io5";
 
+import { CircularProgress } from "@mui/material";
+
 import { useCartContext } from "@/context/CartContext";
 import { formatRupiah } from "@/utils/helper";
 import { useRouter } from "next/navigation";
@@ -39,6 +41,9 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
   const [paymentMethod, setPaymentMethod] = useState("Card");
   const [selectedCard, setSelectedCard] = useState("MasterCard");
   const [cardInfo, setCardInfo] = useState({});
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
+  const [isProcessingSave, setIsProcessingSave] = useState(false);
+  const [isSwitchingPayment, setIsSwitchingPayment] = useState(false);
 
   // Update payloadOrder whenever cart or payment details change
   useEffect(() => {
@@ -94,7 +99,10 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
   };
 
   const handleCheckout = async () => {
+    if (isProcessingCheckout) return;
+
     try {
+      setIsProcessingCheckout(true);
       console.log("Payment Method:", payloadOrder);
       const items = payloadOrder.items
       const now = new Date();
@@ -125,11 +133,15 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
           quantity: item.quantity,
           price_delivery_perkg: item.price_delivery_perKg,
           status: "belum_diproses",
-          subtotal: 
+          subtotal:
               item.quantity <= item.minimum_purchase
               ? (item.minimum_price + item.price_delivery_perKg)
               : Math.round(item.quantity * (item.price + item.price_delivery_perKg)),
-        }))
+        })),
+        item_customers: payloadOrder.item_customers?.map((item) => ({
+          nama_item: item.nama_item,
+          quantity: item.quantity
+        })) || []
       };
 
       const checkout = await postCheckout(payload);
@@ -177,24 +189,29 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
         clearCart();
         clearPayloadOrder();
       }, 2200);
-  
+
     } catch (error) {
       console.error("Gagal hit API:", error);
+    } finally {
+      setIsProcessingCheckout(false);
     }
   };
-  
+
   const finishDate = (duration) => {
     const now = new Date(); // Pindahkan definisi now ke dalam fungsi
     const endDate = new Date(now.getTime() + duration * 60 * 60 * 1000);
     return endDate.toISOString(); // Perbaiki dari isoString() jadi toISOString()
   };
   const handleSave = async () => {
+    if (isProcessingSave) return;
+
     try {
+      setIsProcessingSave(true);
       const items = payloadOrder.items;
       const now = new Date();
       const maxDuration = Math.max(...items.map(item => item.durationHour));
       const endDate = new Date(now.getTime() + maxDuration * 60 * 60 * 1000);
-  
+
       // Payload untuk API checkout
       const payload = {
         customer_name: payloadOrder.customer_name,
@@ -222,6 +239,10 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
               ? item.minimum_price + item.price_delivery_perKg
               : Math.round(item.quantity * (item.price + item.price_delivery_perKg)),
         })),
+        item_customers: payloadOrder.item_customers?.map((item) => ({
+          nama_item: item.nama_item,
+          quantity: item.quantity
+        })) || []
       };
   
       console.log("Checkout payload:", payload);
@@ -271,13 +292,15 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
         clearCart();
         clearPayloadOrder();
       }, 2200);
-  
+
     } catch (error) {
       console.error("Gagal hit API:", error);
+    } finally {
+      setIsProcessingSave(false);
     }
   };
-  
-  
+
+
 
   // const handleSave = () => {
   //   // Save the current state without completing checkout
@@ -546,6 +569,7 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
               }}
               onClick={handleCheckout}
               disabled={
+                isProcessingCheckout ||
                 cart.length === 0 ||
                 !payloadOrder.customer_name?.trim() ||
                 !payloadOrder.phone_number?.trim()
@@ -554,8 +578,17 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
                 {formatRupiah(calculateTotal())}
               </Typography>
               <Box display={"flex"} gap={1} alignItems={"center"}>
-                <Typography fontWeight={"500"}>Pay</Typography>
-                <FaAngleRight />
+                {isProcessingCheckout ? (
+                  <>
+                    <Typography fontWeight={"500"}>Processing...</Typography>
+                    <CircularProgress size={16} sx={{ color: "white" }} />
+                  </>
+                ) : (
+                  <>
+                    <Typography fontWeight={"500"}>Pay</Typography>
+                    <FaAngleRight />
+                  </>
+                )}
               </Box>
             </Button>
 
@@ -571,11 +604,19 @@ export default function CheckoutSidebar({ nav_width, cart_width }) {
               }}
               onClick={handleSave}
               disabled={
+                isProcessingSave ||
                 cart.length === 0 ||
                 !payloadOrder.customer_name?.trim() ||
                 !payloadOrder.phone_number?.trim()
               }>
-              Simpan
+              {isProcessingSave ? (
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Typography>Menyimpan...</Typography>
+                  <CircularProgress size={16} />
+                </Box>
+              ) : (
+                "Simpan"
+              )}
             </Button>
           </Stack>
         </Box>

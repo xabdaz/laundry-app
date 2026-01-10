@@ -68,3 +68,8 @@ export const getVariantByProduct = async (productId) => {
   console.log("transaction detail Prodct By Etalase:", response.data);
   return response.data.data;
 };
+
+export const updateTransaction = async (id, payload) => {
+  const response = await axios.put(`/transactions/${id}`, payload);
+  return response.data;
+};

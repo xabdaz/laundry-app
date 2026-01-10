@@ -29,8 +29,9 @@ import Lottie from "lottie-react";
 import emptyCartAnimation from "../../../public/animation/empty-cart.json";
 import { useRouter } from "next/navigation";
 import { formatRupiah } from "@/utils/helper";
-import { paymentTransaction } from "@/services/pos";
+import { paymentTransaction, updateTransaction } from "@/services/pos";
 import { useGeneralContext } from "@/context/GeneralContext";
+import { FiEdit3 } from "react-icons/fi";
 
 // Transition for full screen dialog
 const Transition = forwardRef(function Transition(props, ref) {
@@ -44,6 +45,8 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
   const [selectedCard, setSelectedCard] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState({});
 
   const { payloadOrder, setPayloadOrder, clearPayloadOrder, setNavbar } =
     useGeneralContext();
@@ -51,6 +54,7 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
 
   const transaction = transactionDetail?.transaction;
   const details = transactionDetail?.details || [];
+  const itemCustomers = transactionDetail?.item_customers || [];
 
   const handleCloseCart = () => {
     setTransactionDetail(null);
@@ -113,6 +117,38 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
     return transaction?.total_price ?? 0;
   };
 
+  const handleOpenEditDialog = () => {
+    setEditForm({
+      customer_name: transaction?.customer_name || "",
+      phone_number: transaction?.phone_number || "",
+      date_in: transaction?.date_in || "",
+      date_out: transaction?.date_out || "",
+      delivery_method: transaction?.delivery_method || "",
+      delivery_fee: transaction?.delivery_fee || 0,
+      total_price: transaction?.total_price || 0,
+      status: transaction?.status || "Pending",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      await updateTransaction(transaction.id, editForm);
+      setOpenSuccessModal(true);
+
+      setTimeout(() => {
+        setEditDialogOpen(false);
+        setTransactionDetail(null);
+        setShouldRefresh(true);
+        router.push("/status");
+        setNavbar("status");
+      }, 1500);
+    } catch (error) {
+      console.error("Gagal update transaksi:", error);
+      alert("Gagal mengupdate transaksi");
+    }
+  };
+
   useEffect(() => {
     // Reset saat CartSidebar muncul (dapat order baru)
     if (transactionDetail) {
@@ -153,9 +189,17 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
           <Typography color="#000000" fontSize={20} fontWeight={500}>
             Pesanan
           </Typography>
-          <IconButton color="error" onClick={handleCloseCart}>
-            <IoIosCloseCircleOutline />
-          </IconButton>
+          <Box display="flex" gap={1}>
+            <IconButton
+              onClick={handleOpenEditDialog}
+              sx={{ bgcolor: "#003049", color: "#fff", ":hover": { bgcolor: "#003049" } }}
+            >
+              <FiEdit3 size={18} />
+            </IconButton>
+            <IconButton color="error" onClick={handleCloseCart}>
+              <IoIosCloseCircleOutline />
+            </IconButton>
+          </Box>
         </Box>
 
         <Box flex={1} overflow="auto" p={2}>
@@ -200,6 +244,44 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
                 </Box>
               </Box>
             ))}
+
+            {/* Item Customers Section */}
+            {itemCustomers.length > 0 && (
+              <>
+                <Box sx={{ mt: 3, mb: 2, borderBottom: "2px solid #003049", pb: 1 }}>
+                  <Typography fontSize={14} fontWeight={600} color="#003049">
+                    Item Customer
+                  </Typography>
+                </Box>
+                {itemCustomers.map((item, idx) => (
+                  <Box
+                    key={`item-cust-${idx}`}
+                    sx={{
+                      mb: 2,
+                      p: 1.5,
+                      bgcolor: "#f5f5f5",
+                      borderRadius: 1,
+                      border: "1px dashed #999",
+                    }}
+                  >
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Box>
+                        <Typography fontSize={14} fontWeight={600} color="#000">
+                          {item.nama_item}
+                        </Typography>
+                        <Typography fontSize={12} color="#666" mt={0.5}>
+                          {item.quantity} pcs
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                ))}
+              </>
+            )}
           </List>
 
           {details.length === 0 && (
@@ -488,6 +570,95 @@ export default function CartSidebar({ width, transactionDetail, setTransactionDe
                 />
               </Box>
             )}
+          </Stack>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Transaction Dialog */}
+      <Dialog
+        fullScreen
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        TransitionComponent={Transition}
+      >
+        <DialogTitle
+          sx={{
+            backgroundColor: "#003049",
+            color: "white",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          Edit Transaksi
+          <IconButton
+            color="inherit"
+            onClick={() => setEditDialogOpen(false)}
+          >
+            <IoIosCloseCircleOutline />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} pt={2}>
+            <TextField
+              label="Nama Pelanggan"
+              fullWidth
+              value={editForm.customer_name}
+              onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })}
+            />
+            <TextField
+              label="Nomor HP"
+              fullWidth
+              value={editForm.phone_number}
+              onChange={(e) => setEditForm({ ...editForm, phone_number: e.target.value })}
+            />
+            <TextField
+              label="Metode Pengiriman"
+              fullWidth
+              value={editForm.delivery_method}
+              onChange={(e) => setEditForm({ ...editForm, delivery_method: e.target.value })}
+            />
+            <TextField
+              label="Biaya Pengiriman"
+              type="number"
+              fullWidth
+              value={editForm.delivery_fee}
+              onChange={(e) => setEditForm({ ...editForm, delivery_fee: parseInt(e.target.value) || 0 })}
+            />
+            <TextField
+              label="Total Harga"
+              type="number"
+              fullWidth
+              value={editForm.total_price}
+              onChange={(e) => setEditForm({ ...editForm, total_price: parseInt(e.target.value) || 0 })}
+            />
+            <TextField
+              label="Status"
+              fullWidth
+              select
+              value={editForm.status}
+              onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+              SelectProps={{ native: true }}
+            >
+              <option value="Pending">Pending</option>
+              <option value="Process">Process</option>
+              <option value="Finished">Finished</option>
+            </TextField>
+
+            <Button
+              variant="contained"
+              fullWidth
+              sx={{
+                bgcolor: "#003049",
+                color: "#fff",
+                py: 1.5,
+                fontSize: "16px",
+                fontWeight: 600,
+              }}
+              onClick={handleSaveEdit}
+            >
+              Simpan Perubahan
+            </Button>
           </Stack>
         </DialogContent>
       </Dialog>
