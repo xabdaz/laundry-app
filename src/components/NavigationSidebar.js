@@ -4,7 +4,7 @@ import React from "react";
 import { useGeneral } from "@/hooks/useGeneral";
 
 import { Box, Button, Stack, Typography } from "@mui/material";
-import { FiHome, FiSettings, FiDatabase } from "react-icons/fi";
+import { FiHome, FiSettings } from "react-icons/fi";
 import { TbLogout } from "react-icons/tb";
 import { GrTransaction } from "react-icons/gr";
 import { PiCashRegisterDuotone } from "react-icons/pi";
@@ -108,7 +108,7 @@ export default function NavigationSidebar({ width }) {
             <SidebarButton icon={FiHome} label="home" routePath="/"/>
             <SidebarButton icon={PiCashRegisterDuotone} label="cashier" />
             <SidebarButton icon={GrTransaction} label="status" />
-            <SidebarButton icon={FiDatabase} label="Master Data" routePath="/master-data" />
+            <SidebarButton icon={PiCashRegisterDuotone} label="New Cashier" routePath="/setting" />
             <SidebarButton icon={TbLogout} label="logout" />
           </Stack>
         </Box>
