@@ -10,14 +10,10 @@ import {
   Paper,
   Skeleton,
   CircularProgress,
-  TextField,
-  InputAdornment,
-  IconButton,
 } from "@mui/material";
 import { useInView } from "react-intersection-observer";
 import { formatRupiah } from "@/utils/helper";
 import { getTransactionDetail, getListTransaction } from "@/services/pos";
-import { FiSearch } from "react-icons/fi";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -29,9 +25,6 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadingDetailId, setLoadingDetailId] = useState(null);
-  const [searchId, setSearchId] = useState("");
-  const [searchResult, setSearchResult] = useState(null);
-  const [isSearching, setIsSearching] = useState(false);
   const scrollContainerRef = useRef(null);
 
   const { ref: lastItemRef, inView: isLastVisible } = useInView();
@@ -106,10 +99,7 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
   };
   
   useEffect(() => {
-    setOrders([]);
     setPage(1);
-    setHasMore(true);
-    setIsLoading(true);
     fetchTransactions(1, true, getIsPaymentValue(value));
   }, [value]);
 
@@ -121,16 +111,19 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
   }, [shouldRefresh, setShouldRefresh]);
 
   useEffect(() => {
-    if (isLastVisible && hasMore && !isLoading && !isRefreshing) {
+    console.log("page nya", page, isLoading);
+
+    if (isLastVisible) {
+    // if (isLastVisible && hasMore && !isLoading && !isRefreshing) {
       setPage((prev) => prev + 1);
     }
   }, [isLastVisible, hasMore, isLoading, isRefreshing]);
 
   useEffect(() => {
-    if (page !== 1 && !isLoading) {
-      fetchTransactions(page, false, getIsPaymentValue(value));
+    if (page !== 1) {
+      fetchTransactions(page, false, getIsPaymentValue(value)); // ✅ Kirim isPayment sesuai tab
     }
-  }, [page]);
+  }, [page, value]);
 
   const handleSelectOrder = async (order) => {
     try {
@@ -143,48 +136,6 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
       console.error("Gagal mengambil detail transaksi:", err);
     } finally {
       setLoadingDetailId(null);
-    }
-  };
-
-  const handleSearchById = async () => {
-    if (!searchId.trim()) {
-      setSearchResult(null);
-      return;
-    }
-
-    try {
-      setIsSearching(true);
-      const res = await getTransactionDetail(searchId.trim());
-      if (res && res.data) {
-        const transaction = res.data.transaction;
-        const mapped = {
-          id: transaction.id,
-          items: res.data.details?.length || 1,
-          name: transaction.customer_name,
-          phone_number: transaction.phone_number,
-          time: formatWIBTime(transaction.date_in),
-          total: transaction.total_price,
-          isHasPaid: transaction.isHasPayment,
-          status: transaction.status === "pending" ? "Pending" : "Finished",
-        };
-        setSearchResult(mapped);
-        await handleSelectOrder(mapped);
-      } else {
-        setSearchResult(null);
-        alert("Transaksi tidak ditemukan");
-      }
-    } catch (err) {
-      console.error("Gagal mencari transaksi:", err);
-      setSearchResult(null);
-      alert("Transaksi tidak ditemukan");
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleSearchById();
     }
   };
 
@@ -221,46 +172,6 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
           <Tab label="Belum Bayar" value={1} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
           <Tab label="Sudah Bayar" value={2} sx={{ textTransform: "capitalize", fontSize: "16px" }} />
         </Tabs>
-
-        {/* Search Bar */}
-        <TextField
-          fullWidth
-          placeholder="Cari berdasarkan ID Transaksi..."
-          value={searchId}
-          onChange={(e) => setSearchId(e.target.value)}
-          onKeyPress={handleKeyPress}
-          disabled={isSearching}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <FiSearch />
-              </InputAdornment>
-            ),
-            endAdornment: searchId && (
-              <InputAdornment position="end">
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    setSearchId("");
-                    setSearchResult(null);
-                  }}
-                >
-                  <Typography fontSize={12} color="primary">
-                    Clear
-                  </Typography>
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            mb: 2,
-            bgcolor: "#fff",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              borderRadius: 2,
-            },
-          }}
-        />
       </Box>
 
       <Box
@@ -281,7 +192,7 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
           </Typography>
         )}
 
-        {isLoading && page === 1 && !searchResult
+        {isLoading && page === 1
           ? [...Array(3)].map((_, index) => (
               <Paper
                 key={`skeleton-${index}`}
@@ -310,7 +221,7 @@ export default function MainContent({ nav_width, cart_width, setShowCartSidebar,
                 </Box>
               </Paper>
             ))
-          : (searchResult ? [searchResult] : filteredOrders).map((order, index) => {
+          : filteredOrders.map((order, index) => {
               const isLast = index === filteredOrders.length - 1;
               return (
                 <Paper
