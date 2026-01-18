@@ -12,7 +12,9 @@ import {
   MenuItem,
   Select,
   InputLabel,
-  Skeleton 
+  Skeleton,
+  Divider,
+  Alert
 } from "@mui/material";
 import { FiPlus, FiMinus } from "react-icons/fi";
 import { IoIosCloseCircleOutline, IoIosArrowBack } from "react-icons/io";
@@ -29,10 +31,77 @@ export default function CartSidebar({ nav_width, cart_width }) {
   const { phones, isLoading, refresh: fetchPhoneNumbersManually } = usePhoneContext();
   const [isNewUser, setNewUser] = useState(false);
 
+  // State for item customers
+  const [itemCustomers, setItemCustomers] = useState([]);
+  const [itemName, setItemName] = useState("");
+  const [itemQty, setItemQty] = useState(1);
+  const [itemNameError, setItemNameError] = useState("");
+
 
   useEffect(() => {
     fetchPhoneNumbersManually();
   }, []);
+
+  // Sync itemCustomers to payloadOrder
+  useEffect(() => {
+    setPayloadOrder(prev => ({
+      ...prev,
+      item_customers: itemCustomers
+    }));
+  }, [itemCustomers, setPayloadOrder]);
+
+  // Function to add item customer
+  const addItemCustomer = () => {
+    setItemNameError("");
+
+    // Validation: name cannot be empty
+    if (!itemName.trim()) {
+      setItemNameError("Nama item tidak boleh kosong");
+      return;
+    }
+
+    // Validation: qty must be at least 1
+    if (itemQty < 1) {
+      setItemNameError("Quantity minimal 1");
+      return;
+    }
+
+    // Validation: no duplicate names
+    const isDuplicate = itemCustomers.some(
+      item => item.nama_item.toLowerCase() === itemName.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      setItemNameError("Nama item sudah ada");
+      return;
+    }
+
+    // Add new item
+    const newItem = {
+      id: Date.now(), // temporary id
+      nama_item: itemName.trim(),
+      quantity: itemQty
+    };
+
+    setItemCustomers([...itemCustomers, newItem]);
+    setItemName("");
+    setItemQty(1);
+  };
+
+  // Function to remove item customer
+  const removeItemCustomer = (id) => {
+    setItemCustomers(itemCustomers.filter(item => item.id !== id));
+  };
+
+  // Function to update item customer quantity
+  const updateItemCustomerQty = (id, newQty) => {
+    if (newQty < 1) return;
+    setItemCustomers(
+      itemCustomers.map(item =>
+        item.id === id ? { ...item, quantity: newQty } : item
+      )
+    );
+  };
   
 
   return (
@@ -189,6 +258,138 @@ export default function CartSidebar({ nav_width, cart_width }) {
 
 
         </Stack>
+      </Box>
+
+      {/* Item Customer Add-on Section */}
+      <Box px={2} py={2} borderBottom="1px solid #eee">
+        <Typography fontSize={14} fontWeight={600} color="#000" mb={1}>
+          Tambah Item Customer
+        </Typography>
+
+        {/* Add Item Form */}
+        <Stack direction="row" spacing={1} alignItems="flex-start">
+          <TextField
+            label="Nama Item"
+            fullWidth
+            size="small"
+            value={itemName}
+            onChange={(e) => {
+              setItemName(e.target.value);
+              setItemNameError("");
+            }}
+            error={!!itemNameError}
+            helperText={itemNameError}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addItemCustomer();
+              }
+            }}
+          />
+
+          <TextField
+            label="Qty"
+            type="number"
+            size="small"
+            value={itemQty || ""}
+            onChange={(e) => {
+              const value = parseInt(e.target.value);
+              if (!isNaN(value) && value >= 1) {
+                setItemQty(value);
+              }
+            }}
+            InputProps={{
+              inputProps: { min: 1 },
+              sx: { width: 80 }
+            }}
+          />
+
+          <IconButton
+            onClick={addItemCustomer}
+            sx={{
+              bgcolor: "#001f3f",
+              color: "#fff",
+              ":hover": { bgcolor: "#001f3f" },
+              mt: 0.5
+            }}
+          >
+            <FiPlus />
+          </IconButton>
+        </Stack>
+
+        {/* Item Customer List */}
+        {itemCustomers.length > 0 && (
+          <Box mt={2}>
+            <Divider sx={{ mb: 2 }} />
+            <Typography fontSize={12} color="#666" mb={1}>
+              Daftar Item Customer ({itemCustomers.length})
+            </Typography>
+            <Stack spacing={1}>
+              {itemCustomers.map((item) => (
+                <Box
+                  key={item.id}
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    p: 1.5,
+                    bgcolor: "#f9f9f9",
+                    borderRadius: 1,
+                    border: "1px solid #e0e0e0"
+                  }}
+                >
+                  <Box flex={1}>
+                    <Typography fontSize={13} fontWeight={500} color="#000">
+                      {item.nama_item}
+                    </Typography>
+                    <Typography fontSize={12} color="#666">
+                      {item.quantity} pcs
+                    </Typography>
+                  </Box>
+
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <IconButton
+                      size="small"
+                      onClick={() => updateItemCustomerQty(item.id, item.quantity - 1)}
+                      disabled={item.quantity <= 1}
+                      sx={{
+                        bgcolor: item.quantity > 1 ? "#001f3f" : "#ccc",
+                        color: "#fff",
+                        ":hover": { bgcolor: item.quantity > 1 ? "#001f3f" : "#ccc" },
+                      }}
+                    >
+                      <FiMinus size={14} />
+                    </IconButton>
+
+                    <Typography fontSize={13} fontWeight={500} sx={{ minWidth: 30, textAlign: "center" }}>
+                      {item.quantity}
+                    </Typography>
+
+                    <IconButton
+                      size="small"
+                      onClick={() => updateItemCustomerQty(item.id, item.quantity + 1)}
+                      sx={{
+                        bgcolor: "#001f3f",
+                        color: "#fff",
+                        ":hover": { bgcolor: "#001f3f" },
+                      }}
+                    >
+                      <FiPlus size={14} />
+                    </IconButton>
+
+                    <IconButton
+                      size="small"
+                      onClick={() => removeItemCustomer(item.id)}
+                      sx={{ color: "#999" }}
+                    >
+                      <IoIosCloseCircleOutline size={18} />
+                    </IconButton>
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+        )}
       </Box>
 
       {/* Scrollable Cart */}
