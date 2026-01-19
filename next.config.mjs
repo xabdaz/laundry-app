@@ -6,6 +6,7 @@ import withPWA from '@ducanh2912/next-pwa';
  */
 const nextConfig = {
   /* config options here */
+  output: 'standalone',
   allowedDevOrigins: ['local-origin.dev', '*.local-origin.dev', 'http://app.rumah-laundry.id'],
 }
 
